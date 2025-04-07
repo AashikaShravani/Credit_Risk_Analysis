@@ -5,6 +5,7 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   sonarqube:
     name: SonarQube
@@ -12,8 +13,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Notify Teams
+        if: always()
+        run: |
+          curl -H 'Content-Type: application/json' \
+          -d '{
+            "@type": "MessageCard",
+            "@context": "https://schema.org/extensions",
+            "summary": "SonarQube Scan Report",
+            "themeColor": "0076D7",
+            "title": "SonarQube Scan Completed",
+            "text": "The SonarQube scan for the latest commit on `main` has completed. Please review the results in the SonarQube dashboard.",
+            "potentialAction": [{
+              "@type": "OpenUri",
+              "name": "View Report",
+              "targets": [{
+                "os": "default",
+                "uri": "https://sonarcloud.io/project/overview?id=AashikaShravani_Credit_Risk_Analysis"
+              }]
+            }]
+          }' \
+          ${{ secrets.TEAMS_WEBHOOK_URL }}
